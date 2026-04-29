@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { getOfferings, saveInvestorWallet } from "../services/apiService";
+import { LogOut, Wallet, Rocket, ShieldCheck, TrendingUp } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
-import { LogOut, Wallet, Rocket, ShieldCheck, TrendingUp } from "lucide-react";
+import { getOfferings, saveInvestorWallet } from "../services/apiService";
+import InvestModal from "../components/InvestModal";
 
 export default function Marketplace() {
   const [offerings, setOfferings] = useState([]);
   const [loading, setLoading] = useState(true);
   const { profile, logout } = useAuth();
+  const [selectedToken, setSelectedToken] = useState(null);
   
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
@@ -167,7 +169,10 @@ export default function Marketplace() {
                 </div>
 
                 <div className="p-8 pt-0 mt-auto">
-                   <button className="btn-invest w-full flex items-center justify-center gap-2 text-sm">
+                   <button 
+                     onClick={() => setSelectedToken(token)}
+                     className="btn-invest w-full flex items-center justify-center gap-2 text-sm"
+                   >
                      Invest Now <TrendingUp className="w-4 h-4" />
                    </button>
                    <p className="text-[10px] text-center mt-4 text-[var(--color-text-muted)] font-medium opacity-50">
@@ -179,6 +184,13 @@ export default function Marketplace() {
           </div>
         )}
       </main>
+
+      {selectedToken && (
+        <InvestModal 
+          token={selectedToken} 
+          onClose={() => setSelectedToken(null)} 
+        />
+      )}
     </div>
   );
 }

@@ -22,17 +22,14 @@ try {
 
 const app = express();
 const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'http://localhost:3000',
   'https://portal-bc.web.app',
   'https://portal-bc.firebaseapp.com'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // Allow any localhost port for development
+    if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin) || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
