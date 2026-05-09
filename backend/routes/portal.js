@@ -138,7 +138,7 @@ router.get('/wallets', verifyAuthToken, async (req, res) => {
  */
 router.post('/create-order', verifyAuthToken, async (req, res) => {
   try {
-    const { amount, tokenId, quantity, pricePerToken, walletAddress, tokenName } = req.body;
+    const { amount, tokenId, quantity, pricePerToken, walletAddress, tokenName, tenantId } = req.body;
     const buyerId = req.user.uid;
 
     const MAIN_BACKEND = process.env.MAIN_BACKEND_URL || 'http://127.0.0.1:5000/api';
@@ -153,7 +153,8 @@ router.post('/create-order', verifyAuthToken, async (req, res) => {
         pricePerToken,
         buyerId,
         walletAddress,
-        tokenName
+        tokenName,
+        tenantId
       })
     });
 

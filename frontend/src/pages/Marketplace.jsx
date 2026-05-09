@@ -3,7 +3,7 @@ import { LogOut, Wallet, Rocket, ShieldCheck, TrendingUp } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
-import { getOfferings, saveInvestorWallet } from "../services/apiService";
+import { getOfferings, saveInvestorWallet, getUserWallets } from "../services/apiService";
 import InvestModal from "../components/InvestModal";
 
 export default function Marketplace() {
@@ -11,6 +11,8 @@ export default function Marketplace() {
   const [loading, setLoading] = useState(true);
   const { profile, logout } = useAuth();
   const [selectedToken, setSelectedToken] = useState(null);
+  const [savedWallets, setSavedWallets] = useState([]);
+  const [selectedWalletAddress, setSelectedWalletAddress] = useState("");
   
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
@@ -18,13 +20,31 @@ export default function Marketplace() {
 
   useEffect(() => {
     loadOfferings();
+    fetchWallets();
   }, []);
+
+  async function fetchWallets() {
+    try {
+      const wallets = await getUserWallets();
+      setSavedWallets(wallets);
+    } catch (err) {
+      console.error("Failed to fetch wallets:", err);
+    }
+  }
 
   useEffect(() => {
     if (isConnected && address) {
-      saveInvestorWallet(address).catch(console.error);
+      saveInvestorWallet(address).then(() => fetchWallets()).catch(console.error);
     }
   }, [isConnected, address]);
+
+  useEffect(() => {
+    if (address && !selectedWalletAddress && savedWallets.length === 0) {
+      setSelectedWalletAddress(address.toLowerCase());
+    } else if (savedWallets.length > 0 && !selectedWalletAddress) {
+      setSelectedWalletAddress(savedWallets[0].address.toLowerCase());
+    }
+  }, [address, savedWallets, selectedWalletAddress]);
 
   async function loadOfferings() {
     try {
@@ -37,147 +57,141 @@ export default function Marketplace() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+    <div className="min-h-screen bg-black text-[#f5f5f7]">
       {/* Navbar */}
-      <nav className="border-b border-[var(--color-border)] retail-glass sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-blue-500 rounded-xl flex items-center justify-center">
-              <Rocket className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-extrabold tracking-tight">Token<span className="text-emerald-400">Portal</span></span>
+      <nav className="apple-nav">
+        <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer group">
+            <div className="logo-mark group-hover:scale-105 transition-transform">T</div>
+            <span className="text-lg font-bold tracking-tight hidden sm:block">TokenPortal</span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 sm:gap-8">
             {!isConnected ? (
-              <button onClick={() => connect({ connector: injected() })} className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm font-bold transition-all border border-white/10">
-                <Wallet className="w-4 h-4" /> Connect Wallet
+              <button 
+                onClick={() => connect({ connector: injected() })} 
+                className="text-sm font-medium text-[#0071e3] hover:underline"
+              >
+                Connect Wallet
               </button>
             ) : (
               <div className="flex items-center gap-3">
-                <div className="text-right hidden sm:block">
-                  <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Active Wallet</p>
-                  <p className="text-xs font-mono opacity-70">{address.slice(0,6)}...{address.slice(-4)}</p>
+                <div className="hidden md:flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                  <select 
+                    value={selectedWalletAddress}
+                    onChange={(e) => setSelectedWalletAddress(e.target.value)}
+                    className="bg-transparent text-[12px] font-medium text-[#86868b] outline-none appearance-none cursor-pointer hover:text-white"
+                  >
+                    {address && <option value={address.toLowerCase()} className="bg-[#161617]">{address.slice(0,6)}...{address.slice(-4)}</option>}
+                    {savedWallets.map(w => (
+                      <option key={w.id} value={w.address.toLowerCase()} className="bg-[#161617]">
+                        {w.address.slice(0,6)}...{w.address.slice(-4)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <button onClick={() => disconnect()} className="p-2 hover:bg-white/5 rounded-lg text-[var(--color-text-muted)]">
-                  <LogOut className="w-4 h-4" />
+                <button onClick={() => disconnect()} className="text-[12px] text-red-500/80 hover:text-red-500">
+                  Disconnect
                 </button>
               </div>
             )}
             
-            <div className="h-8 w-[1px] bg-white/10 mx-2" />
+            <div className="w-[1px] h-4 bg-white/10 hidden sm:block" />
             
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 overflow-hidden">
+              <button onClick={logout} className="text-sm font-medium text-[#86868b] hover:text-white transition-colors">Sign Out</button>
+              <div className="w-8 h-8 rounded-full bg-[#1d1d1f] overflow-hidden border border-white/5">
                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.email}`} alt="avatar" />
               </div>
-              <button onClick={logout} className="text-sm font-bold text-[var(--color-text-muted)] hover:text-white transition-colors">Sign Out</button>
             </div>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <header className="max-w-7xl mx-auto px-4 py-16 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-[10px] font-bold uppercase tracking-widest mb-6">
-          <TrendingUp className="w-3 h-3" /> Marketplace Live
-        </div>
-        <h1 className="text-5xl md:text-6xl font-black mb-6 leading-tight">
-          Invest in the <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-500">Future</span>
+      <header className="content-container pt-20 pb-16 animate-up">
+        <h1 className="hero-title">
+          Invest in the next <br />
+          <span className="text-[#86868b]">global standard.</span>
         </h1>
-        <p className="text-[var(--color-text-muted)] text-lg max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
-          Access exclusive token offerings curated by top organizations. Secure, transparent, and built on the blockchain.
+        <p className="hero-subtitle max-w-2xl mx-auto">
+          High-performance tokenized assets from verified projects. 
+          The future of ownership is here.
         </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          <div className="p-6 retail-glass rounded-2xl border border-white/5 text-left">
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mb-4">
-              <ShieldCheck className="w-6 h-6 text-emerald-400" />
-            </div>
-            <h3 className="font-bold mb-1">Secure Assets</h3>
-            <p className="text-xs text-[var(--color-text-muted)]">All tokens are verified and compiled by our management engine.</p>
-          </div>
-          <div className="p-6 retail-glass rounded-2xl border border-white/5 text-left">
-            <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4">
-              <TrendingUp className="w-6 h-6 text-blue-400" />
-            </div>
-            <h3 className="font-bold mb-1">Growth Focused</h3>
-            <p className="text-xs text-[var(--color-text-muted)]">Early-stage access to innovative blockchain projects.</p>
-          </div>
-          <div className="p-6 retail-glass rounded-2xl border border-white/5 text-left">
-            <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-4">
-              <Wallet className="w-6 h-6 text-purple-400" />
-            </div>
-            <h3 className="font-bold mb-1">Fast Deploy</h3>
-            <p className="text-xs text-[var(--color-text-muted)]">Buy and manage tokens instantly with your connected wallet.</p>
-          </div>
-        </div>
       </header>
 
-      {/* Main Marketplace */}
-      <main className="max-w-7xl mx-auto px-4 pb-24">
-        <div className="flex items-center justify-between mb-12">
-          <h2 className="text-3xl font-bold">Featured Offerings</h2>
-          <div className="flex gap-2">
-             <button className="px-4 py-2 bg-white/5 rounded-lg text-xs font-bold border border-white/10 hover:bg-white/10 transition-colors">All Categories</button>
-             <button className="px-4 py-2 bg-white/5 rounded-lg text-xs font-bold border border-white/10 hover:bg-white/10 transition-colors">Popular</button>
+      {/* Main Grid */}
+      <main className="content-container pb-40">
+        <div className="flex items-end justify-between mb-10 animate-up" style={{ animationDelay: '0.1s' }}>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Active Projects</h2>
           </div>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {[1,2,3].map(i => (
-              <div key={i} className="card-marketplace h-96 animate-pulse bg-white/5 border-white/10" />
+              <div key={i} className="aspect-[4/5] rounded-[24px] bg-[#161617] animate-pulse" />
             ))}
           </div>
         ) : offerings.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 rounded-[2rem] border border-dashed border-white/10">
-            <Rocket className="w-16 h-16 mx-auto mb-4 opacity-20" />
-            <h3 className="text-xl font-bold mb-2">No offerings available yet</h3>
-            <p className="text-[var(--color-text-muted)]">Check back soon for new token launches.</p>
+          <div className="flex flex-col items-center justify-center py-32 bg-[#161617] rounded-[24px] border border-white/5">
+             <div className="logo-mark mb-6 opacity-20">T</div>
+            <h3 className="text-xl font-bold mb-2">No offerings available</h3>
+            <p className="text-[#86868b] text-sm">Please check back later for new updates.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {offerings.map(token => (
-              <div key={token.id} className="card-marketplace flex flex-col group">
-                <div className="p-8 pb-4">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-emerald-500/20 group-hover:scale-110 transition-transform">
-                      {token.symbol?.slice(0, 4)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-10">
+            {offerings.map((token, idx) => (
+              <div 
+                key={token.id} 
+                className="apple-card group animate-up" 
+                style={{ animationDelay: `${0.1 + idx * 0.1}s` }}
+              >
+                <div className="p-8 flex flex-col h-full">
+                  {/* Icon & Status */}
+                  <div className="flex justify-between items-start mb-10">
+                    <div className="w-16 h-16 rounded-3xl bg-white text-black flex items-center justify-center text-2xl font-black shadow-2xl">
+                      {token.symbol?.slice(0, 1)}
                     </div>
-                    <span className="px-3 py-1 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-white/50 border border-white/10">
-                      Standard ERC-20
-                    </span>
+                    <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-widest py-1 px-2.5 bg-white/5 rounded-full">Active</span>
                   </div>
-                  <h3 className="text-2xl font-bold mb-2">{token.name}</h3>
-                  <div className="flex items-center gap-2 mb-6">
-                    <span className="text-emerald-400 font-bold font-mono text-sm">{token.symbol}</span>
-                    <span className="text-[var(--color-text-muted)] opacity-50">•</span>
-                    <span className="text-xs text-[var(--color-text-muted)] font-bold">Launch: Active</span>
-                  </div>
-                  
-                  <div className="space-y-4 py-4 border-y border-white/5 mb-6">
-                    <div className="flex justify-between items-center text-xs">
-                       <span className="text-[var(--color-text-muted)] font-medium">Decimals</span>
-                       <span className="font-bold font-mono">{token.decimals}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                       <span className="text-[var(--color-text-muted)] font-medium">Network</span>
-                       <span className="font-bold text-blue-400">Sepolia Testnet</span>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="p-8 pt-0 mt-auto">
-                   <button 
-                     onClick={() => setSelectedToken(token)}
-                     className="btn-invest w-full flex items-center justify-center gap-2 text-sm"
-                   >
-                     Invest Now <TrendingUp className="w-4 h-4" />
-                   </button>
-                   <p className="text-[10px] text-center mt-4 text-[var(--color-text-muted)] font-medium opacity-50">
-                     Smart Contract Verified 0x...{token.contractAddress?.slice(-6)}
-                   </p>
+                  {/* Info */}
+                  <div className="mb-10">
+                    <h3 className="text-2xl font-bold tracking-tight mb-2 group-hover:text-[#0071e3] transition-colors">{token.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[#86868b]">{token.symbol}</span>
+                      <span className="text-[#333]">•</span>
+                      <span className="text-xs font-bold text-[#0071e3]">Ethereum Mainnet</span>
+                    </div>
+                  </div>
+
+                  {/* Data Points */}
+                  <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/5 mb-8">
+                    <div>
+                      <p className="text-[11px] font-bold text-[#86868b] uppercase tracking-widest mb-1">Decimals</p>
+                      <p className="text-lg font-bold">{token.decimals}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] font-bold text-[#86868b] uppercase tracking-widest mb-1">Status</p>
+                      <p className="text-lg font-bold text-emerald-500">Live</p>
+                    </div>
+                  </div>
+
+                  {/* Footer Action */}
+                  <div className="mt-auto">
+                    <button 
+                      onClick={() => setSelectedToken(token)}
+                      className="w-full btn-apple py-4 text-base"
+                    >
+                      Invest
+                    </button>
+                    <p className="text-[10px] text-center mt-4 text-[#424245] font-mono">
+                      {token.contractAddress?.slice(0, 10)}...{token.contractAddress?.slice(-8)}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -185,11 +199,20 @@ export default function Marketplace() {
         )}
       </main>
 
+      {/* Modal Overlay */}
       {selectedToken && (
-        <InvestModal 
-          token={selectedToken} 
-          onClose={() => setSelectedToken(null)} 
-        />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl animate-up">
+          <div className="absolute inset-0" onClick={() => setSelectedToken(null)} />
+          <div className="relative w-full max-w-[540px]">
+             <InvestModal 
+                token={selectedToken} 
+                onClose={() => setSelectedToken(null)} 
+                selectedWalletAddress={selectedWalletAddress}
+                setSelectedWalletAddress={setSelectedWalletAddress}
+                savedWallets={savedWallets}
+              />
+          </div>
+        </div>
       )}
     </div>
   );

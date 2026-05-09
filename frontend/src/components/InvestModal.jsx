@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { injected } from "wagmi/connectors";
-import { initiatePurchase, verifyPayment } from "../services/apiService";
+import { initiatePurchase, verifyPayment, getUserWallets } from "../services/apiService";
 import { X, CreditCard, Wallet, AlertCircle, ShoppingCart, CheckCircle2 } from "lucide-react";
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -9,7 +9,7 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 // Use a placeholder test key if env var is missing
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "pk_test_TYooMQauvdEDq54NiTphI7jx");
 
-function CheckoutForm({ onSuccess, onError, token, quantity, totalPrice, address }) {
+function CheckoutForm({ onSuccess, onError, token, quantity, tokenPrice, totalPrice, address }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,6 +33,8 @@ function CheckoutForm({ onSuccess, onError, token, quantity, totalPrice, address
             paymentIntentId: paymentIntent.id,
             meta: {
               tokenId: token.id,
+              tokenName: token.name,
+              tenantId: token.tenantId,
               quantity,
               pricePerToken: tokenPrice,
               totalPrice,
@@ -62,7 +64,7 @@ function CheckoutForm({ onSuccess, onError, token, quantity, totalPrice, address
   );
 }
 
-export default function InvestModal({ token, onClose }) {
+export default function InvestModal({ token, onClose, selectedWalletAddress, setSelectedWalletAddress, savedWallets }) {
   const { isConnected, address } = useAccount();
   const { connect } = useConnect();
   const [quantity, setQuantity] = useState(1);
@@ -70,7 +72,6 @@ export default function InvestModal({ token, onClose }) {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [clientSecret, setClientSecret] = useState("");
-
   const tokenPrice = parseFloat(token.pricePerToken || token.price || 0);
   const totalPrice = (quantity * tokenPrice).toFixed(2);
 
@@ -94,9 +95,10 @@ export default function InvestModal({ token, onClose }) {
         amount: parseFloat(totalPrice),
         tokenId: token.id,
         tokenName: token.name,
+        tenantId: token.tenantId,
         quantity: parseInt(quantity),
         pricePerToken: tokenPrice,
-        walletAddress: address
+        walletAddress: selectedWalletAddress || address
       });
 
       if (order.clientSecret) {
@@ -114,15 +116,18 @@ export default function InvestModal({ token, onClose }) {
 
   if (success) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-[#0f172a] border border-emerald-500/30 w-full max-w-md rounded-[2rem] p-10 text-center shadow-2xl animate-in fade-in zoom-in">
-            <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 mx-auto mb-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl animate-fade-in">
+        <div className="bg-[#1c1c1e] border border-white/10 w-full max-w-md rounded-[30px] p-12 text-center shadow-2xl animate-fade-in-up">
+            <div className="w-20 h-20 bg-[#1d1d1f] rounded-full flex items-center justify-center text-[#2997ff] mx-auto mb-8 border border-white/5">
                 <CheckCircle2 className="w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-black mb-2">Payment Successful!</h2>
-            <p className="text-white/50 mb-8 font-medium">Your investment has been recorded in the blockchain ledger.</p>
-            <button onClick={onClose} className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/20">
-                Back to Marketplace
+            <h2 className="text-3xl font-bold tracking-tight mb-3 text-[#f5f5f7]">Investment Received.</h2>
+            <p className="text-[#86868b] mb-10 font-medium leading-relaxed">Your transaction is being processed and will be visible on the blockchain shortly.</p>
+            <button 
+              onClick={onClose} 
+              className="w-full py-4 bg-[#f5f5f7] text-[#000000] rounded-full font-bold transition-all hover:bg-white"
+            >
+                Done
             </button>
         </div>
       </div>
@@ -130,108 +135,120 @@ export default function InvestModal({ token, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-[#0f172a] border border-white/10 w-full max-w-md rounded-[2rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xl overflow-y-auto animate-up">
+      <div className="bg-[#1c1c1e] border border-white/10 w-full max-w-[500px] rounded-[32px] overflow-hidden shadow-2xl my-8">
         {/* Header */}
-        <div className="relative p-6 border-b border-white/5">
+        <div className="relative p-6 sm:p-8 border-b border-white/5">
           <button 
             onClick={onClose}
-            className="absolute right-6 top-6 text-white/50 hover:text-white transition-colors"
+            className="absolute right-6 top-6 sm:right-8 sm:top-8 text-[#86868b] hover:text-[#f5f5f7] transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <ShoppingCart className="w-5 h-5" />
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#2d2d2f] flex items-center justify-center text-white border border-white/5">
+              <ShoppingCart className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold">Invest in {token.name}</h2>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#f5f5f7]">{token.name}</h2>
+              <p className="text-[13px] text-[#86868b] font-medium">Secure Payment</p>
+            </div>
           </div>
-          <p className="text-sm text-white/40">Secure checkout powered by Stripe</p>
         </div>
 
         {/* Content */}
-        <div className="p-8">
+        <div className="p-6 sm:p-8">
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-400 text-sm">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p>{error}</p>
+            <div className="mb-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-[13px] font-medium">
+              {error}
             </div>
           )}
 
           {!clientSecret ? (
-            <div className="space-y-6">
-              {/* Quantity Selector */}
+            <div className="space-y-8">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-white/30 mb-3">Quantity</label>
-                <div className="flex items-center gap-4 bg-white/5 rounded-2xl p-2 border border-white/5">
-                  <button 
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-12 h-12 rounded-xl hover:bg-white/5 flex items-center justify-center text-xl font-bold"
-                  >-</button>
-                  <input 
-                    type="number" 
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="bg-transparent flex-1 text-center font-bold text-xl outline-none"
-                  />
-                  <button 
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-12 h-12 rounded-xl hover:bg-white/5 flex items-center justify-center text-xl font-bold"
-                  >+</button>
-                </div>
-              </div>
-
-              {/* Price Summary */}
-              <div className="bg-emerald-500/5 rounded-2xl p-6 border border-emerald-500/10">
-                  <div className="flex justify-between items-center text-[var(--color-text-muted)]">
-                    <span>Price per Token</span>
-                    <span className="font-bold text-white">${tokenPrice}</span>
+                <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-[#86868b] mb-3 ml-1">Receiving Address</label>
+                <div className="relative">
+                  <select 
+                    value={selectedWalletAddress}
+                    onChange={(e) => setSelectedWalletAddress(e.target.value)}
+                    className="apple-input pr-12"
+                  >
+                    {address && (
+                      <option value={address.toLowerCase()}>Active: {address.slice(0, 6)}...{address.slice(-4)}</option>
+                    )}
+                    {savedWallets.map(w => (
+                      <option key={w.id} value={w.address.toLowerCase()}>
+                        {w.address.slice(0, 6)}...{w.address.slice(-4)}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#86868b]">
+                    <Wallet className="w-4 h-4" />
                   </div>
-                <div className="flex justify-between items-center pt-4 border-t border-white/5">
-                  <span className="text-emerald-400/80 font-bold uppercase tracking-widest text-[10px]">Total Investment</span>
-                  <span className="text-2xl font-black text-emerald-400">${totalPrice}</span>
                 </div>
               </div>
 
-              {/* Action Button */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-[#86868b] mb-3 ml-1">Quantity</label>
+                  <div className="flex items-center bg-[#1d1d1f] rounded-xl p-1 border border-[#424245]">
+                    <button 
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-10 h-10 rounded-lg hover:bg-white/5 text-[#86868b] font-bold"
+                    >-</button>
+                    <input 
+                      type="number" 
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="bg-transparent flex-1 text-center font-bold text-sm outline-none text-[#f5f5f7]"
+                    />
+                    <button 
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="w-10 h-10 rounded-lg hover:bg-white/5 text-[#86868b] font-bold"
+                    >+</button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-[#86868b] mb-3 ml-1">Total</label>
+                  <div className="h-[52px] flex items-center justify-center bg-[#1d1d1f]/50 border border-[#424245] rounded-xl">
+                    <span className="text-lg font-bold tracking-tight text-[#f5f5f7]">${totalPrice}</span>
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={handleInitiate}
                 disabled={loading}
-                className="w-full btn-invest flex items-center justify-center gap-3 py-5 text-lg"
+                className="w-full btn-apple py-4.5 h-14 text-base"
               >
-                {loading ? (
-                  "Initiating..."
-                ) : !isConnected ? (
-                  <> <Wallet className="w-5 h-5" /> Connect Wallet to Buy </>
-                ) : (
-                  <> <CreditCard className="w-5 h-5" /> Proceed to Checkout </>
-                )}
+                {loading ? "Processing..." : isConnected ? "Review Investment" : "Connect Wallet"}
               </button>
-
-              {!isConnected && (
-                <p className="text-center text-[10px] text-white/30 uppercase tracking-widest font-bold">
-                  Wallet address is required for token allocation
-                </p>
-              )}
             </div>
           ) : (
-            <div>
-              <div className="mb-4 bg-emerald-500/5 rounded-2xl p-4 border border-emerald-500/10 flex justify-between items-center">
-                 <span className="text-white/40 text-sm">Total to Pay</span>
-                 <span className="font-bold text-lg">${totalPrice}</span>
+            <div className="animate-up">
+              <div className="mb-8 p-6 bg-[#1d1d1f] rounded-2xl border border-white/5 flex justify-between items-center">
+                 <span className="text-[#86868b] font-medium text-sm">Order Total</span>
+                 <span className="text-xl font-bold tracking-tight text-[#f5f5f7]">${totalPrice}</span>
               </div>
+              
               <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' } }}>
                 <CheckoutForm 
                   onSuccess={() => setSuccess(true)} 
                   onError={(err) => setError(err)} 
                   token={token}
                   quantity={quantity}
+                  tokenPrice={tokenPrice}
                   totalPrice={totalPrice}
-                  address={address}
+                  address={selectedWalletAddress || address}
                 />
               </Elements>
-              <button onClick={() => setClientSecret("")} className="mt-4 text-xs text-white/40 hover:text-white w-full text-center">
-                Back to Details
+
+              <button 
+                onClick={() => setClientSecret("")} 
+                className="mt-8 text-[13px] text-[#0071e3] hover:underline w-full text-center font-medium"
+              >
+                Go Back
               </button>
             </div>
           )}

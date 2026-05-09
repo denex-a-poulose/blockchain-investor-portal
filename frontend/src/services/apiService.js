@@ -51,6 +51,10 @@ export async function saveInvestorWallet(address) {
   });
 }
 
+export async function getUserWallets() {
+  return fetchWithAuth("/portal/wallets");
+}
+
 // --- 2. Marketplace & Offerings ---
 
 /**

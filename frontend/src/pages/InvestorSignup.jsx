@@ -41,95 +41,95 @@ export default function InvestorSignup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/20">
-            <Rocket className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-black mb-2">Join the Future</h1>
-          <p className="text-[var(--color-text-muted)] font-medium">Create your investor account in seconds.</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-black text-[#f5f5f7] px-6 py-12">
+      <div className="w-full max-w-[400px] animate-up">
+        <div className="flex flex-col items-center mb-12">
+          <div className="logo-mark mb-8 text-black">T</div>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Join us.</h1>
+          <p className="text-[#86868b] font-medium text-center">Create your global tokenized portfolio.</p>
         </div>
 
-        <div className="retail-glass p-8 rounded-[2rem] border border-white/5 shadow-2xl">
-          <form onSubmit={handleSignup} className="space-y-5">
+        <div className="bg-[#161617] p-8 sm:p-10 rounded-[32px] border border-white/5 shadow-2xl">
+          <form onSubmit={handleSignup} className="space-y-6">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-2 ml-1">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm font-medium focus:border-emerald-500 outline-none transition-all"
-                  placeholder="John Doe"
-                />
-              </div>
+              <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-[#86868b] mb-2 ml-1">Full Name</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="apple-input"
+                placeholder="Required"
+              />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-2 ml-1">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm font-medium focus:border-emerald-500 outline-none transition-all"
-                  placeholder="name@email.com"
-                />
-              </div>
+              <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-[#86868b] mb-2 ml-1">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="apple-input"
+                placeholder="Required"
+              />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-2 ml-1">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm font-medium focus:border-emerald-500 outline-none transition-all"
-                  placeholder="••••••••"
-                />
-              </div>
+              <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-[#86868b] mb-2 ml-1">Password</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="apple-input"
+                placeholder="Min. 8 characters"
+              />
             </div>
 
-            {error && <p className="text-red-400 text-xs font-bold bg-red-400/10 p-4 rounded-xl border border-red-400/20">{error}</p>}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                <p className="text-red-400 text-xs font-semibold leading-relaxed">{error}</p>
+              </div>
+            )}
 
             <button
               disabled={loading}
               type="submit"
-              className="btn-invest w-full flex items-center justify-center gap-2 mt-4"
+              className="w-full btn-apple py-4"
             >
-              {loading ? "Creating Account..." : "Start Investing"} <ArrowRight className="w-4 h-4" />
+              {loading ? "Creating Account..." : "Create Account"}
             </button>
           </form>
 
-          <div className="relative my-8">
+          <div className="relative my-10">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/5"></div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#111827] px-4 text-[var(--color-text-muted)] font-bold tracking-widest">Or join with</span>
+            <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em]">
+              <span className="bg-[#161617] px-4 text-[#86868b] font-bold">Or</span>
             </div>
           </div>
 
           <button
             onClick={handleGoogleSignup}
             disabled={loading}
-            className="w-full bg-white/5 border border-white/10 rounded-xl py-4 flex items-center justify-center gap-3 hover:bg-white/10 transition-all font-bold"
+            className="w-full btn-apple-secondary py-4 flex items-center justify-center gap-3 text-sm font-semibold"
           >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
-            Join with Google
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="Google" />
+            Continue with Google
           </button>
 
-          <p className="text-center mt-8 text-sm text-[var(--color-text-muted)] font-medium">
-            Already have an account? <Link to="/login" className="text-emerald-400 font-bold hover:underline">Sign In</Link>
+          <p className="text-center mt-10 text-[13px] text-[#86868b] font-medium">
+            Already have an account? <Link to="/login" className="text-[#0071e3] font-semibold hover:underline">Sign in now.</Link>
           </p>
+        </div>
+
+        <div className="mt-16 text-center">
+           <p className="text-[11px] text-[#424245] font-medium leading-relaxed">
+             Secure asset management &copy; 2026 <br />
+             Global Financial Standards. All rights reserved.
+           </p>
         </div>
       </div>
     </div>
